@@ -14,9 +14,9 @@ class NetworkManager {
     const parsedData = d3.csvParse(csvText, function (d) {
       return {
         time: +d.time,
-        flux: +d.flux,
-        flux_err: +d.flux_err,
-        fwhm: +d.fwhm,
+        flux: d.flux === "" ? NaN : +d.flux,
+        flux_err: d.flux_err === "" ? NaN : +d.flux_err,
+        fwhm: d.fwhm === "" ? NaN : +d.fwhm,
         color: d.color,
         // pixel_shift: +d.pixel_shift
       };
@@ -179,7 +179,7 @@ class GraphDimensions {
 
 
 class SpikeLines {
-  constructor(svg, xScale, lcYScale, graphDimensions, buffer) {
+  constructor(svg, xScale, lcYScale, graphDimensions, buffer, maxSpikes = NaN) {
     this.svg = svg;
     this.xScale = xScale;
     this.lcYScale = lcYScale;
@@ -187,6 +187,7 @@ class SpikeLines {
     this.clickLineXPositions = [];
     this.spikeId = 0;
     this.buffer = buffer;
+    this.maxSpikes = maxSpikes;
     this.initializeSpikeLineInteractions();
   }
 
@@ -240,6 +241,19 @@ class SpikeLines {
       .attr("y1", mousey + crossSize)
       .attr("x2", mousex + crossSize)
       .attr("y2", mousey - crossSize);
+
+    if (!isNaN(this.maxSpikes) && this.clickLineXPositions.length >= this.maxSpikes) {
+      // Remove the oldest spike line
+      console.debug("Removing the oldest spike line", "#click-line-group-" + String(this.spikeId - this.maxSpikes));
+      const oldestSpikeGroup = svg.select("#click-line-group" + String(this.spikeId - this.maxSpikes)); // Updated ID format
+      if (!oldestSpikeGroup.empty()) {
+        oldestSpikeGroup.remove();
+      }
+      this.clickLineXPositions.shift();
+    }
+  
+    // Add the new spike position
+    this.clickLineXPositions.push(self.xScale.invert(mousex));  
   }
 
   initializeSpikeLineInteractions() {
@@ -362,8 +376,13 @@ function binData(data, binDuration, yColumnName = "flux") {
 
 
 function adaptLcYScale(models, lcYScale) {
-  const minModelValue = d3.min(models.columns, columnName => d3.min(models, d => d[columnName]));
-  const maxModelValue = d3.max(models.columns, columnName => d3.max(models, d => d[columnName]));
+  const minModelValue = d3.min(models.columns, columnName =>
+    d3.min(models, d => (isNaN(d[columnName]) ? Infinity : d[columnName]))
+  );
+
+  const maxModelValue = d3.max(models.columns, columnName =>
+    d3.max(models, d => (isNaN(d[columnName]) ? -Infinity : d[columnName]))
+  );
 
   // Check if minModelValue or maxModelValue is outside the current yScale domain
   const minY = lcYScale.domain()[0];
@@ -707,13 +726,13 @@ class Panel {
     if (column_name == "flux") {
       // to accommodate errorbars
       const fluxValues = data.map(d => d[column_name] - d['flux_err'])
-        .concat(data.map(d => d[column_name] + d['flux_err']));
+        .concat(data.map(d => d[column_name] + d['flux_err'])).filter(value => !isNaN(value));
       minYValue = d3.min(fluxValues);
       maxYValue = d3.max(fluxValues);
       // minYValue = d3.quantile(fluxValues, 0.01);
       // maxYValue = d3.quantile(fluxValues, 0.99);
     } else {
-      const columnValues = data.map(d => d[column_name]);
+      const columnValues = data.map(d => d[column_name]).filter(value => !isNaN(value));
       minYValue = d3.min(columnValues);
       maxYValue = d3.max(columnValues);
       // minYValue = d3.quantile(columnValues, 0.01);
@@ -780,7 +799,7 @@ class Graph {
     const minXValue = d3.min(data, d => d.time);
     const maxXValue = d3.max(data, d => d.time);
     const bufferX = (maxXValue - minXValue) / 40;
-    const modelBuffer = (maxXValue - minXValue) / 12;
+    const modelBuffer = (maxXValue - minXValue) / 7;
     const modelTimeArray = d3.range(minXValue - bufferX/2 - modelBuffer, minXValue - bufferX/2, (modelBuffer / models.length));
     const xScale = d3.scaleLinear()
       .domain([minXValue - bufferX - modelBuffer, maxXValue + bufferX])
@@ -815,7 +834,7 @@ class Graph {
     // pixelShiftPanel.setXLabel("Time [days]");
   
     // add spike lines (vertical crosshair line)
-    this.spikeLines = new SpikeLines(svg, xScale, lcPanel.yScale, graphDimensions, bufferX + modelBuffer);
+    this.spikeLines = new SpikeLines(svg, xScale, lcPanel.yScale, graphDimensions, bufferX + modelBuffer, 1);
     console.debug("spikeLines", this.spikeLines);
   }
   

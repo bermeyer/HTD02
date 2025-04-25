@@ -9,6 +9,7 @@ from sqlalchemy import Engine, create_engine
 
 PROJECT_BASE = Path(__file__).parent.parent
 
+
 class ConfigLoader:
     def __init__(
         self, mode: Literal["development", "test", "production"] = "development"
@@ -84,11 +85,13 @@ class MySQLDatabase:
         username: str,
         password: Optional[str] = None,
         host: str = "localhost",
+        port: int = 3306,
     ):
         self.database = database
         self.username = username
         self.password = password
         self.host = host
+        self.port = port
         self.engine = self._create_engine()
 
     def query_to_dataframe(self, query: str) -> Optional[pd.DataFrame]:
@@ -142,7 +145,9 @@ class MySQLDatabase:
         # If columns are provided, ensure they match the number of record fields
         if columns:
             if len(columns) != num_columns:
-                logging.error("Number of columns does not match number of record fields.")
+                logging.error(
+                    "Number of columns does not match number of record fields."
+                )
                 return
             column_names = ", ".join(columns)
         else:
@@ -176,7 +181,7 @@ class MySQLDatabase:
         finally:
             self._close_cursor(cursor)
             self._close_connection(connection)
-        
+
         return success
 
     def insert_records(
@@ -229,7 +234,8 @@ class MySQLDatabase:
     def fetch_user_ids(self) -> List[int]:
         """Fetches all user IDs from the users table."""
         results = self.query("SELECT id FROM users")
-        return [row[0] for row in results] if results else []
+        # Sort numerically
+        return sorted([row[0] for row in results]) if results else []
 
     def _create_engine(self) -> Engine:
         """Constructs the SQLAlchemy engine for MySQL."""
@@ -241,7 +247,7 @@ class MySQLDatabase:
         url = (
             f"mysql+mysqlconnector://{self.username}"
             + (f":{self.password}" if self.password else "")
-            + f"@{self.host}/{self.database}"
+            + f"@{self.host}:{self.port}/{self.database}"
         )
         return url
 
@@ -263,15 +269,19 @@ class MySQLDatabase:
             for table in tables:
                 cursor.execute(f"DROP TABLE IF EXISTS {table}")
 
-            database_structure_path = PROJECT_BASE / "migrations" / "database_structure.sql"
+            database_structure_path = (
+                PROJECT_BASE / "migrations" / "database_structure.sql"
+            )
             if not database_structure_path.exists():
-                raise FileNotFoundError(f"SQL file not found: {database_structure_path}")
+                raise FileNotFoundError(
+                    f"SQL file not found: {database_structure_path}"
+                )
 
-            with open(database_structure_path, 'r') as file:
+            with open(database_structure_path, "r") as file:
                 sql_script = file.read()
                 for result in cursor.execute(sql_script, multi=True):
                     pass  # Process each result to avoid "commands out of sync" error
-                        
+
             connection.commit()
             logging.info("Database reset and structure recreated.")
         except mysql.connector.Error as error:
@@ -308,9 +318,11 @@ class MySQLDatabase:
             raise ValueError("ConfigLoader instance is None")
         if not config_loader.config:
             raise ValueError("ConfigLoader config is empty")
+
         return cls(
-            database=config_loader.get("database"),
-            username=config_loader.get("username"),
-            password=config_loader.get("password"),
-            host=config_loader.get("host"),
+            **{
+                item: config_loader.get(item)
+                for item in ["database", "username", "password", "host", "port"]
+                if item in config_loader.config
+            }
         )

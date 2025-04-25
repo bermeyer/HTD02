@@ -6,7 +6,13 @@ build-backend = "setuptools.build_meta"
 name = "htd_scripts"
 version = "0.0.1"
 dependencies = [
+    "bcrypt",
     "mysql-connector-python",
     "pandas",
-    "sqlalchemy"
+    "sqlalchemy",
+    "httpx",
+    "pyaml",
 ]
+
+[project.optional-dependencies]
+dev = ["ruff", "nbstripout-fast"]

@@ -15,9 +15,9 @@ class NetworkManager {
     const parsedData = d3.csvParse(csvText, function (d) {
       return {
         time: +d.time,
-        flux: +d.flux,
-        flux_err: +d.flux_err,
-        fwhm: +d.fwhm,
+        flux: d.flux === "" ? NaN : +d.flux,
+        flux_err: d.flux_err === "" ? NaN : +d.flux_err,
+        fwhm: d.fwhm === "" ? NaN : +d.fwhm,
         // color: d.color,
         injection: +d.injection,
         // pixel_shift: +d.pixel_shift
@@ -72,7 +72,6 @@ class NetworkManager {
       this.models = newModels;
       console.debug('Data:', this.data);
       console.debug('Models:', this.models);
-      this.fileIndex++; // Increment the fileIndex after fetching
     });
   }
 
@@ -791,7 +790,7 @@ class Graph {
     const minXValue = d3.min(data, d => d.time);
     const maxXValue = d3.max(data, d => d.time);
     const bufferX = (maxXValue - minXValue) / 40;
-    const modelBuffer = (maxXValue - minXValue) / 12;
+    const modelBuffer = (maxXValue - minXValue) / 7;
     const modelTimeArray = d3.range(minXValue - bufferX/2 - modelBuffer, minXValue - bufferX/2, (modelBuffer / models.length));
     const xScale = d3.scaleLinear()
       .domain([minXValue - bufferX - modelBuffer, maxXValue + bufferX])

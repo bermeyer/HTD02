@@ -41,3 +41,4 @@ data_*/
 config/config.json
 migrations/*.js
 
+scripts/output/*
