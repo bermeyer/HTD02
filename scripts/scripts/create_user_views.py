@@ -39,6 +39,8 @@ def create_user_view_mapping(
     user_cycle = np.tile(user_ids, total_assignments // len(user_ids) + 1)[
         :total_assignments
     ]
+    # logging.info(f"nr of views for image 1: {np.count_nonzero(user_cycle == 1)}")
+    # logging.info(f"nr of views for image 10: {np.count_nonzero(user_cycle == 10)}")
 
     assignments = np.column_stack(
         [
@@ -46,9 +48,13 @@ def create_user_view_mapping(
             np.repeat(file_ids, n_views),  # Repeat image IDs accordingly
         ]
     )
+    # logging.info(f"nr of views for image 1 before shuffle: {np.count_nonzero(assignments == 1)}")
+    # logging.info(f"nr of views for image 10 before shuffle: {np.count_nonzero(assignments == 10)}")
+
     if shuffle_images:
         rng.shuffle(assignments)
-
+    logging.info(f"nr of views for image 1 after shuffle: {np.count_nonzero(assignments == 1)}")
+    logging.info(f"nr of views for image 10 after shuffle: {np.count_nonzero(assignments == 10)}")
     df = pd.DataFrame(assignments, columns=["user_id", "file_id"])
     df["view_order"] = df.groupby("user_id").cumcount() + 1
 
@@ -78,7 +84,22 @@ def create_user_view_mapping_with_and_without_transits(
 
     transit_df = df.copy()
     transit_df["file_id"] += n_images
+    # c=np.count_nonzero(transit_df["user_id"] == 1)
+    # d=np.count_nonzero(transit_df["user_id"] == 10)
+    # logging.info(f"nr of views for image 1 enter function2 : {c}")
+    # logging.info(f"nr of views for image 10 enter function2: {d}")
+
+    # f=np.count_nonzero(df["user_id"] == 10)
+    # g=np.count_nonzero(df["user_id"] == 1)
+    # logging.info(f"nr of views for image 1 enter function2 df: {g}")
+    # logging.info(f"nr of views for image 10 enterfunction2 df: {f}")
+
     transit_df = transit_df.reindex(index=np.roll(df.index, -delay))
+
+    # c=np.count_nonzero(transit_df["user_id"] == 1)
+    # d=np.count_nonzero(transit_df["user_id"] == 10)
+    # logging.info(f"nr of views for image 1 after reindex: {c}")
+    # logging.info(f"nr of views for image 10 after reindex: {d}")
 
     # Pairwise shuffle between df and transit_df to break regularity
     mask = np.random.rand(len(df)) < 0.5
@@ -86,12 +107,28 @@ def create_user_view_mapping_with_and_without_transits(
         transit_df.iloc[mask].copy(),
         df.iloc[mask].copy(),
     )
+    # c=np.count_nonzero(transit_df["user_id"] == 1)
+    # d=np.count_nonzero(transit_df["user_id"] == 10)
+    # logging.info(f"nr of views for image 1 after swtich: {c}")
+    # logging.info(f"nr of views for image 10 after swtich: {d}")
+
+    # f=np.count_nonzero(df["user_id"] == 1)
+    # g=np.count_nonzero(df["user_id"] == 10)
+    # logging.info(f"nr of views for image 1 after swtich df: {f}")
+    # logging.info(f"nr of views for image 10 after swtich df: {g}")
+
+
 
     combined_df = pd.concat([df, transit_df], ignore_index=True)
     combined_df.iloc[0::2, :] = df
     combined_df.iloc[1::2, :] = transit_df
 
     combined_df["view_order"] = combined_df.groupby("user_id").cumcount() + 1
+
+    # o=np.count_nonzero(combined_df["user_id"] == 1)
+    # p=np.count_nonzero(combined_df["user_id"] == 10)
+    # logging.info(f"nr of views for image 1 after combine: {o}")
+    # logging.info(f"nr of views for image 10 after combine: {p}")
 
     return combined_df
 

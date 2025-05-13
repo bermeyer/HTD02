@@ -709,7 +709,7 @@ class Panel {
     else {
         radius = radius ?? 1;
     }
-    
+    console.log(this.panelIndex);
 
     // Create circles
      self.panel.selectAll("." + class_name + "-circle")
@@ -719,7 +719,7 @@ class Panel {
          .attr("cx", d => self.xScale(d.time))
         .attr("cy", d => self.yScale(d[self.yDataKey]))
          .attr("r", radius)
-         .attr("fill",color);
+        //  .attr("fill",color);
   }
 
   appendModelLinePlot(models, modelTimeArray) {

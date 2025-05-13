@@ -47,6 +47,10 @@ def parse_args():
         default=Path(__file__).parent / "output",
         help="Directory to save handouts.",
     )
+    parser.add_argument("--add_user_batch",
+    type=bool, default=0,
+    help="Whether to add an additional user batch"
+    )
 
     return parser.parse_args()
 
@@ -89,6 +93,22 @@ if __name__ == "__main__":
     #insert second half of assignments into database
     insert_dataframe_into_database(db, records2)
     logging.info(f"Inserted another {len(records2)} records for user image views nto database.")
+
+    #Create the last user batch
+    optional_users=generate_users(db=db, num_useres=1, password_length=args.password_length)
+    
+    #vieworder of last user batch
+    if args.add_user_batch:
+        nr_files= np.ceil(len(records2["view_order"].unique())/len(users1))
+        #ensure that the last user batch has the same number of or more view_orderings as the first half
+        records3=records1[records1["view_order"]<=nr_files].copy()
+
+        records3["user_id"] = records2["user_id"].max() + 1
+        records3["view_order"] = records3.groupby("user_id").cumcount() +1
+        insert_dataframe_into_database(db, records3)
+        logging.info(f"Inserted {len(records3)} records for image views into database.")
+        #add the last user batch to combined dataframe
+        combined_users= pd.concat([combined_users, optional_users], ignore_index=True)
 
     user_handout_generator = UserHandoutGenerator(
         users=combined_users,

@@ -18,7 +18,8 @@ class NetworkManager {
         flux: d.flux === "" ? NaN : +d.flux,
         flux_err: d.flux_err === "" ? NaN : +d.flux_err,
         fwhm: d.fwhm === "" ? NaN : +d.fwhm,
-        // color: d.color,
+        //color: d.color,
+        prob: +d.prob,
         injection: +d.injection,
         // pixel_shift: +d.pixel_shift
       };
@@ -89,6 +90,10 @@ class NetworkManager {
   submitData(postData) {
     return new Promise((resolve, reject) => {
         this.fileIndex++; // Increment fileId
+        if (this.fileIndex ==10) {
+          window.location.href = "/classify";
+          return new Promise(() => {});
+        }
         resolve({ success: true, fileId: this.fileId });
     });
 }
@@ -105,7 +110,7 @@ class GraphDimensions {
     this.innerHeightPlot = 0;
     this.interPanelPadding = 20;
     this.panelHeightFractions = [0.8];
-    this.panelNames = ["flux"];
+    this.panelNames = ["flux", "prob"];
     this.panelHeights = [];
     this.lcPanelHeight = 0;
     this.fwhmPanelHeight = 0;
@@ -372,14 +377,27 @@ class Panel {
       plot = true,
       xAxisVisibility = "hidden",
       yScale = null,
+      fileIndex = 0,
     } = options;
     const panelIndex = graphDimensions.panelNames.indexOf(panelName);
-    const translateY = graphDimensions.panelTops[panelIndex];
-
+    var translateY=0;
+    console.log("fileindex prior to checking", fileIndex);
+    if (fileIndex % 2==0) {
+      const totalHeight = graphDimensions.panelHeights[0];// total height, assigned by graphdimensions
+    this.panelHeight = panelName === "flux" ? totalHeight * 0.75 : totalHeight * 0.25; //ensures the flux gets 75% of the space, the probability 25%
+    translateY = panelIndex === 0 ? 0 : totalHeight * 0.75; // Position panels correctly
+    console.log("entered if-loop");
+    } 
+    else {
+      console.log("entered else-loop");
+    translateY = graphDimensions.panelTops[panelIndex];
+    this.panelHeight = graphDimensions.panelHeights[0];
+    }
+    console.log("after loop check, translateY", translateY, panelIndex);
     this.graphDimensions = graphDimensions;
     this.panel = svg.append("g").attr("transform", `translate(0, ${translateY})`);
     this.panelIndex = panelIndex;
-    this.panelHeight = graphDimensions.panelHeights[this.panelIndex];
+    
     this.panelName = panelName;
     this.yDataKey = yDataKey;
     this.xScale = xScale;
@@ -409,13 +427,16 @@ class Panel {
     this.setYLabel();
 
     this.plotInjectionLine(data);
-    this.plotDataWithBins(data, 0.01);    
+    this.plotDataWithBins(data, 0.02);    
   };
 
 
   plotDataWithBins(data, bin_duration=0.01) {
     this.plotErrorBar(data, "data");
+    if (this.yDataKey == "flux"){
     this.plotErrorBar(binData(data, bin_duration, this.yDataKey), "bin");
+    }
+
   }
 
 
@@ -444,8 +465,13 @@ class Panel {
     // Make sure, the data points end up within the yScale image range
     const filteredData = filterDataByYScaleDomain(data, this.yScale, yColumnName);
 
-    // Create circles in the top panel
-    this.plotScatter(filteredData, class_name, radius);
+    let color="black";
+    if (this.yDataKey =="prob"){ //to plot it red for Probability
+        color="red";
+        console.log("entered if-loop")
+    }
+    // Create circles in the top panel, creates the dots
+    this.plotScatter(filteredData, class_name, radius, color);
 
     // Create vertical bars for the error in the top panel
     if ((yColumnName + "_err") in data[0]){
@@ -464,7 +490,7 @@ class Panel {
   plotInjectionLine(data) {
     const self = this;
     const injectionData = data.map(d => ({ time: d.time, injection: d.injection }));
-
+    console.log("injectionData", injectionData);
     // Create a line generator
     const line = d3.line()
         .x(d => self.xScale(d.time))
@@ -685,10 +711,11 @@ class Panel {
     self.panel.selectAll("." + class_name + "-circle")
         .data(data)
         .enter().append("circle")
-        .attr("class", class_name + "-circle")
+         .attr("class", class_name + "-circle"+ "-" + this.panelIndex)
         .attr("cx", d => self.xScale(d.time))
         .attr("cy", d => self.yScale(d[self.yDataKey]))
-        .attr("r", radius);
+         .attr("r", radius)
+        //  .attr("fill",color);
   }
 
   appendModelLinePlot(models, modelTimeArray) {
@@ -780,6 +807,7 @@ class Graph {
     const {data, models} = this.networkManager;
     const graphDimensions = this.dimensions;
     const svg = this.svg();
+    let fileIndex = this.networkManager.fileIndex;
 
     // set the dimensions and margins of the graph
     graphDimensions.update();
@@ -800,24 +828,31 @@ class Graph {
     // Create x-axes
     const xAxis = d3.axisBottom(xScale);
     xAxis.tickSizeOuter(0);
-  
-  
-    // Create the LightCurve panel
-    let lcPanel = new Panel(svg, graphDimensions, data, 'flux', {xAxis, xScale, 'yLabel': 'Flux', plot: false, xAxisVisibility: "visible"});
+  // Create the LightCurve panel
+    let lcPanel = new Panel(svg, graphDimensions, data, 'flux', {xAxis, xScale, 'yLabel': 'Flux', plot: false, xAxisVisibility: "hidden", fileIndex});
   
     // Adapt the yScale to accommodate the models
     adaptLcYScale(models, lcPanel.yScale);
   
     lcPanel.PlotPanel(data);
     lcPanel.appendModelLinePlot(models, modelTimeArray);
+    
+  console.log("fileindex:",fileIndex, fileIndex % 2);
+  if (fileIndex % 2 == 0) {
+    console.log("entered if-loop");
+    let probpanel = new Panel(svg, graphDimensions, data, 'prob', { xAxis, xScale, 'yLabel': 'Probability', plot: false , xAxisVisibility:"visible", fileIndex});
+    probpanel.PlotPanel(data);
+    probpanel.setXLabel("Time [days]");
+  }  
+  else{
     // lcPanel.plotVarianceBars(data, 'fwhm', 40);
     // lcPanel.plotColorBars(data, 'fwhm', 40);
+    
     lcPanel.setXLabel("Time [days]");
-  
     // Plot the fwhm panel
     // let  fwhmPanel = new Panel(svg, graphDimensions, data, 'fwhm', {xAxis, xScale, 'yLabel': 'FWHM'});
     // fwhmPanel.plotVarianceBars(data, 'fwhm', 40);
-  
+  }
   
     // Plot the pixelShiftPanelHeight panel
     // let  pixelShiftPanel = new Panel(svg, graphDimensions, data, 'pixel_shift', {xAxis, xScale, 'yLabel': 'Pixel shift', 'xAxisVisibility': 'visible'});
