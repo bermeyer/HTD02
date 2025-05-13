@@ -34,6 +34,17 @@
 .vertical-line:hover {
   stroke: var(--plot-line-color, black);
 }
+/* Adjustments for NN_show.js-classes for discerning probability & data panel  */
+.data-circle-0 {
+  stroke: var(--plot-data-color, rgb(195, 195, 195));
+  /* stroke-width: 0.5px; */
+  fill: var(--plot-data-color, rgb(195, 195, 195));
+}
+.data-circle-1 {
+  stroke: var(--plot-data-color, rgb(245, 8, 8));
+  /* stroke-width: 0.5px; */
+  fill: var(--plot-data-color, rgb(235, 8, 8));
+}
 
 .data-circle {
   stroke: var(--plot-data-color, rgb(195, 195, 195));

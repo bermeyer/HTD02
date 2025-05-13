@@ -6,10 +6,13 @@ const sequelize = require("sequelize");
 
 const { generateDownloadToken } = require("../utils/tokenUtils");
 const config = require("../config/config.js");
-const max_file_id = config.max_file_id;
+// const user = require("../models/user.js");
+const nr_users = config.nr_users;
+const max_file_id = config.max_file_id/2;
+const threshold = (max_file_id%nr_users)+1;
 
 // Handle POST requests to '/post'
-function handlePostRequest(user_id, file_id_user, view_index_user, time, certainty) {
+function handlePostRequest(user_id, file_id_user, view_index_user, time, certainty,res) {
   return new Promise(async (resolve, reject) => {
     console.log("handlePostRequest", { user_id, file_id_user, view_index_user, time, certainty });
     try {
@@ -60,17 +63,44 @@ function handlePostRequest(user_id, file_id_user, view_index_user, time, certain
           });
         }
       }
-
-      const updated_view_index = (view_index + 1) % max_file_id;
+      // const updated_view_index = (view_index + 1) % max_file_id;
+      const updated_view_index = (view_index + 1);
+      const maxuserview = getusermaxuserview(user_id);
+      console.log("maxuserview", maxuserview);
+      console.log("threshold", threshold);
+      console.log("nr_users", nr_users);
+      console.log("max_file_id", max_file_id);
+      if (updated_view_index === maxuserview+1) {
+        await updateUserViewIndex(user_id, 1);
+        console.log("entering reset view index");
+        console.log("Resetting view index to 1"); 
+        res.status(200).json({ logout: true }); //set custom message
+        return;
+      }
+      else{
       await updateUserViewIndex(user_id, updated_view_index);
 
       console.log(`User ${user_id}'s posting sucessful. New file id is ${updated_view_index}.`);
-      resolve(updated_view_index);
+      resolve(updated_view_index);}
     } catch (err) {
       console.error("Error in post:", err);
       reject(err);
     }
   });
+}
+
+function getusermaxuserview(user_id) {
+  var functionid =user_id;
+  if (functionid > nr_users){ //ids larger than nr_useser have the same batches as user_ids smaller than nr_users
+    functionid = user_id - nr_users;
+  }
+
+  if (functionid < threshold){
+    return Math.ceil(max_file_id/nr_users) * 2;
+  }
+  else {
+    return Math.floor(max_file_id/nr_users) * 2;
+  }
 }
 
 
@@ -125,7 +155,7 @@ router.post("/post/", async (req, res) => {
   // console.log("POST request recieved at /post got", { file_id_user, time });
 
   try {
-    const newViewIndex = await handlePostRequest(user_id, file_id_user, view_index_user, time, certainty);
+    const newViewIndex = await handlePostRequest(user_id, file_id_user, view_index_user, time, certainty,res);
     const downloadToken = generateDownloadToken(newViewIndex);
 
     res.status(201).json({ message: "Dataset created successfully", downloadToken });

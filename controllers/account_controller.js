@@ -124,7 +124,8 @@ accountRoutes.get("/profile", async function (req, res) {
       username = user.username;
     }
     try {
-      const topUsers = await getTopUsers(10);
+      const topUsers = await getTopUsers(0); //Adjust this to get a table of the top users
+      username=username.slice(4); //for batch testing only the number of user is required
       res.render("profile/profile", { username: username, topUsers: topUsers })
     } catch (error) {
       console.error("Error fetching top users:", error);

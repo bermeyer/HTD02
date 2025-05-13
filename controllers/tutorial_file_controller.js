@@ -19,7 +19,9 @@ if (!fs.existsSync(TUTORIAL_DATA_DIR_PATH)) {
  * Asynchronously retrieves a tutorial file based on the user's request and sends it as a response.
  */
 async function getTutorialFileAndSendResponse(req, res) {
+  console.log(req.params);
   const { fileIndex } = req.params; // Extract fileIndex
+  console.log(fileIndex);
   let fileType = req.params.fileType;
   console.log("Received request for tutorial file:", fileType, "with index:", fileIndex);
 

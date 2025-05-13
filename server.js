@@ -47,8 +47,8 @@ app.use("/", HomeRoutes);
 app.use("/", AccountRoutes);
 app.use("/", fileController);
 app.use("/", postController);
-app.use("/", tutorialFileController);
 app.use("/", authenticate, ClassifyRoutes);
+app.use("/", tutorialFileController);
 
 app.get("/login", (req, res) => {
   const error = req.query.error || null;

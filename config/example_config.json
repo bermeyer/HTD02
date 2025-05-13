@@ -1,13 +1,13 @@
 {
   "development": {
     "username": "myUsername",
-    "__password__": "myPassword",
+    "password": "myPassword",
     "database": "htd",
     "host": "127.0.0.1",
     "dialect": "mysql",
     "secretTokenKey": "some_secret_key",
     "max_file_id": 50,
-    "num_tutorial_files": 10
+    "nr_users": 10
   },
   "test": {
     "username": "myUsername",
@@ -17,7 +17,8 @@
     "dialect": "mysql",
     "secretTokenKey": "some_secret_key",
     "max_file_id": 50,
-    "num_tutorial_files": 10
+    "num_tutorial_files": 10,
+    "nr_users": 10
   },
   "production": {
     "username": "myUsername",
@@ -27,6 +28,7 @@
     "dialect": "mysql",
     "secretTokenKey": "some_secret_key",
     "max_file_id": 50,
-    "num_tutorial_files": 50
+    "num_tutorial_files": 10,
+    "nr_users": 10
   }
 }
