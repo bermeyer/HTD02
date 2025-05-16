@@ -749,10 +749,15 @@ class Panel {
       // to accommodate errorbars
       const fluxValues = data.map(d => d[column_name] - d['flux_err'])
         .concat(data.map(d => d[column_name] + d['flux_err']));
-      minYValue = d3.min(fluxValues);
-      maxYValue = d3.max(fluxValues);
-      // minYValue = d3.quantile(fluxValues, 0.01);
-      // maxYValue = d3.quantile(fluxValues, 0.99);
+      // minYValue = d3.min(fluxValues);
+      // maxYValue = d3.max(fluxValues);
+      minYValue = d3.quantile(fluxValues, 0.01);
+      maxYValue = d3.quantile(fluxValues, 0.99);
+    } else if (column_name == "prob") { // fixed scaling for the probability panel
+        return d3.scaleLinear()
+          .domain([0, 1])
+          .range([panelHeight, 0]);
+
     } else {
       const columnValues = data.map(d => d[column_name]);
       minYValue = d3.min(columnValues);
