@@ -108,8 +108,11 @@ def create_user_view_mapping_with_and_without_transits(
         combined_df.loc[indices2, 'view_order'] = np.roll(combined_df.loc[indices2, 'view_order'].values, delay)
         indices3 = combined_df.loc[combined_df["user_id"] == user].iloc[::3].index  # Get the index of every third row
         combined_df.loc[indices3, 'view_order'] = np.roll(combined_df.loc[indices3, 'view_order'].values, delay*3)
+
         indices4 = combined_df.loc[combined_df["user_id"] == user].iloc[1::3].index  # Get the index of every third row
-        combined_df.loc[indices4, 'view_order'] = np.roll(combined_df.loc[indices4, 'view_order'].values, -delay*3)
+        combined_df.loc[indices4, 'view_order'] = np.roll(combined_df.loc[indices4, 'view_order'].values, -delay*)
+
+    
 
 
     return combined_df
