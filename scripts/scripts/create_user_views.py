@@ -84,51 +84,32 @@ def create_user_view_mapping_with_and_without_transits(
 
     transit_df = df.copy()
     transit_df["file_id"] += n_images
-    # c=np.count_nonzero(transit_df["user_id"] == 1)
-    # d=np.count_nonzero(transit_df["user_id"] == 10)
-    # logging.info(f"nr of views for image 1 enter function2 : {c}")
-    # logging.info(f"nr of views for image 10 enter function2: {d}")
 
-    # f=np.count_nonzero(df["user_id"] == 10)
-    # g=np.count_nonzero(df["user_id"] == 1)
-    # logging.info(f"nr of views for image 1 enter function2 df: {g}")
-    # logging.info(f"nr of views for image 10 enterfunction2 df: {f}")
 
     transit_df = transit_df.reindex(index=np.roll(df.index, -delay))
 
-    # c=np.count_nonzero(transit_df["user_id"] == 1)
-    # d=np.count_nonzero(transit_df["user_id"] == 10)
-    # logging.info(f"nr of views for image 1 after reindex: {c}")
-    # logging.info(f"nr of views for image 10 after reindex: {d}")
-
-    # Pairwise shuffle between df and transit_df to break regularity
     mask = np.random.rand(len(df)) < 0.5
     df.iloc[mask], transit_df.iloc[mask] = (
         transit_df.iloc[mask].copy(),
         df.iloc[mask].copy(),
     )
-    # c=np.count_nonzero(transit_df["user_id"] == 1)
-    # d=np.count_nonzero(transit_df["user_id"] == 10)
-    # logging.info(f"nr of views for image 1 after swtich: {c}")
-    # logging.info(f"nr of views for image 10 after swtich: {d}")
-
-    # f=np.count_nonzero(df["user_id"] == 1)
-    # g=np.count_nonzero(df["user_id"] == 10)
-    # logging.info(f"nr of views for image 1 after swtich df: {f}")
-    # logging.info(f"nr of views for image 10 after swtich df: {g}")
-
-
 
     combined_df = pd.concat([df, transit_df], ignore_index=True)
     combined_df.iloc[0::2, :] = df
     combined_df.iloc[1::2, :] = transit_df
 
     combined_df["view_order"] = combined_df.groupby("user_id").cumcount() + 1
+    for user in combined_df["user_id"].unique():
+    
 
-    # o=np.count_nonzero(combined_df["user_id"] == 1)
-    # p=np.count_nonzero(combined_df["user_id"] == 10)
-    # logging.info(f"nr of views for image 1 after combine: {o}")
-    # logging.info(f"nr of views for image 10 after combine: {p}")
+        indices = combined_df.loc[combined_df["user_id"] == user].iloc[1::2].index  # Get the index of every second row
+        combined_df.loc[indices, 'view_order'] = np.roll(combined_df.loc[indices, 'view_order'].values, -delay)
+        indices2 = combined_df.loc[combined_df["user_id"] == user].iloc[::2].index  # Get the index of every second row
+        combined_df.loc[indices2, 'view_order'] = np.roll(combined_df.loc[indices2, 'view_order'].values, delay)
+        indices3 = combined_df.loc[combined_df["user_id"] == user].iloc[::3].index  # Get the index of every third row
+        combined_df.loc[indices3, 'view_order'] = np.roll(combined_df.loc[indices3, 'view_order'].values, delay*3)
+
+    
 
     return combined_df
 
