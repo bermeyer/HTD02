@@ -20,7 +20,7 @@ class NetworkManager {
         fwhm: d.fwhm === "" ? NaN : +d.fwhm,
         //color: d.color,
         prob: +d.prob,
-        injection: +d.injection,
+        injection: d.injection === ""? 1:+d.injection,
         // pixel_shift: +d.pixel_shift
       };
     });
@@ -90,7 +90,7 @@ class NetworkManager {
   submitData(postData) {
     return new Promise((resolve, reject) => {
         this.fileIndex++; // Increment fileId
-        if (this.fileIndex ==10) {
+        if (this.fileIndex === 20) {
           window.location.href = "/classify";
           return new Promise(() => {});
         }
@@ -425,8 +425,9 @@ class Panel {
     this.addEmptyAxisRight();
 
     this.setYLabel();
-
-    this.plotInjectionLine(data);
+    if (this.yDataKey == "flux") {
+      this.plotInjectionLine(data);
+    }
     this.plotDataWithBins(data, 0.02);    
   };
 
@@ -467,7 +468,7 @@ class Panel {
 
     let color="black";
     if (this.yDataKey =="prob"){ //to plot it red for Probability
-        color="red";
+        color="blue";
         console.log("entered if-loop")
     }
     // Create circles in the top panel, creates the dots
@@ -487,18 +488,60 @@ class Panel {
     }
   }
 
+  findNextValidDataPoint(data, currentIndex) {
+    // Start from the next index after the current point
+    for (let i = currentIndex + 1; i < data.length; i++) {
+        if (!isNaN(data[i].time)) {
+            return data[i];  // Return the next valid point
+        }
+    }
+    return null;  // Return null if no valid point exists after the current one
+}
+
+  // Linear interpolation function
+  // Helper function to linearly interpolate and extrapolate time values
+  //required as gaps in time series lead to double plotting of injection line/skipping of NaN values
+  interpolateAndExtrapolateTime(data) {
+    const interpolatedData = [];
+    for (let i = 0; i < data.length; i++) {
+        const current = data[i];
+
+        // If the time is missing (NaN)t
+        if (current.time ===0 && i!=0) {
+            // Extrapolate for time == 0
+                // Linear interpolation between previous and next known time points
+                const prev = data[i - 1];
+                const next = this.findNextValidDataPoint(data, i);  // Find the next valid data point
+
+                if (next) {
+                const interpolatedTime = prev.time + (next.time - prev.time) * (i - prev.index) / (next.index - prev.index);
+                current.time = interpolatedTime;
+                } else {
+    // No valid next point found, handle it accordingly
+                current.time = prev.time;  // keep previous time, should only affect last points
+                } 
+        }
+        interpolatedData.push(current);
+    }
+    return interpolatedData;
+}
+
+
   plotInjectionLine(data) {
     const self = this;
+    console.group("plotInjectionLine");
     const injectionData = data.map(d => ({ time: d.time, injection: d.injection }));
-    console.log("injectionData", injectionData);
+    console.log("injectionData", this.interpolateAndExtrapolateTime(injectionData));
+
     // Create a line generator
     const line = d3.line()
         .x(d => self.xScale(d.time))
         .y(d => self.yScale(d.injection));
-
+    console.log("line y", line);
+    
     // Append the line to the panel
     const lineElement = self.panel.append('path')
-        .datum(injectionData)
+        .datum(this.interpolateAndExtrapolateTime(injectionData)) // Use the interpolated data
         .attr('class', 'injection-line')
         .attr('d', line)
         .attr('fill', 'none') // No fill for the line
@@ -739,16 +782,21 @@ class Panel {
   createYScale(data) {
     const column_name = this.yDataKey;
     const panelHeight = this.panelHeight;
-
+    // console.log("column_name in yscale", column_name);
     let minYValue, maxYValue;
     if (column_name == "flux") {
       // to accommodate errorbars
       const fluxValues = data.map(d => d[column_name] - d['flux_err'])
         .concat(data.map(d => d[column_name] + d['flux_err']));
-      minYValue = d3.min(fluxValues);
-      maxYValue = d3.max(fluxValues);
-      // minYValue = d3.quantile(fluxValues, 0.01);
-      // maxYValue = d3.quantile(fluxValues, 0.99);
+      // minYValue = d3.min(fluxValues);
+      // maxYValue = d3.max(fluxValues);
+      minYValue = d3.quantile(fluxValues, 0.01);
+      maxYValue = d3.quantile(fluxValues, 0.99);
+    } else if (column_name == "prob") { // fixed scaling for the probability panel
+        return d3.scaleLinear()
+          .domain([0, 1])
+          .range([panelHeight, 0]);
+
     } else {
       const columnValues = data.map(d => d[column_name]);
       minYValue = d3.min(columnValues);

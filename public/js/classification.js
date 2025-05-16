@@ -730,10 +730,10 @@ class Panel {
       // to accommodate errorbars
       const fluxValues = data.map(d => d[column_name] - d['flux_err'])
         .concat(data.map(d => d[column_name] + d['flux_err'])).filter(value => !isNaN(value));
-      minYValue = d3.min(fluxValues);
-      maxYValue = d3.max(fluxValues);
-      // minYValue = d3.quantile(fluxValues, 0.01);
-      // maxYValue = d3.quantile(fluxValues, 0.99);
+      // minYValue = d3.min(fluxValues);
+      // maxYValue = d3.max(fluxValues);
+      minYValue = d3.quantile(fluxValues, 0.01);
+      maxYValue = d3.quantile(fluxValues, 0.99);
     } else {
       const columnValues = data.map(d => d[column_name]).filter(value => !isNaN(value));
       minYValue = d3.min(columnValues);

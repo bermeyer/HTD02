@@ -14,9 +14,14 @@ body {
   /* background: linear-gradient(0deg, rgba(2,0,36,1) 0%, rgba(9,9,121,1) 69%, rgba(0,212,255,1) 100%);  */
   /* background: radial-gradient(circle, rgba(238,174,202,1) 0%, rgba(148,187,233,1) 100%);  */
 }
-body.special-background {
+body.special-background { /*color scheme for tutorial  */
   background-color: #d63d3d;
   --plot-model-line-color: rgb(15, 38, 172);
+  .data-circle-1{
+    stroke: var(--plot-data-color, rgb(36, 43, 138));
+  /* stroke-width: 0.5px; */
+  fill: var(--plot-data-color, rgb(36, 43, 138));
+  }
 }
 
 header {
